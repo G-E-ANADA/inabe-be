@@ -1,11 +1,10 @@
 import os
 from typing import List, Optional
-
 import certifi
 import motor.motor_asyncio
 from bson import ObjectId
-from dotenv import load_dotenv  # Add this import
-from fastapi import Body, FastAPI, HTTPException, status
+from dotenv import load_dotenv
+from fastapi import Depends, Body, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -47,7 +46,6 @@ if not origins:
     origins = ["http://localhost:4000",
                "http://localhost:1234"]  # Default origins
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,  # origins 리스트에 있는 도메인에서 오는 요청을 허용
@@ -88,10 +86,21 @@ class JobPostModel(BaseModel):
     envStndWalk: str
     # envHandwork: str
     reqLicens: Optional[str]
+    latitude: str
+    longitude: str
 
 
 class JobPostCollection(BaseModel):
     job_posts: List[JobPostModel]
+
+
+class SearchCriteria(BaseModel):
+    compAddr: Optional[str] = None
+    jobNm: Optional[str] = None
+    empType: Optional[str] = None
+    envEyesight: Optional[str] = None
+    envLiftPower: Optional[str] = None
+    envBothHands: Optional[str] = None
 
 
 @app.get(
@@ -101,12 +110,46 @@ class JobPostCollection(BaseModel):
     response_model_by_alias=False,
 )
 async def list_job_posts():
-    """
-    List all of the student data in the database.
-
-    The response is unpaginated and limited to 1000 results.
-    """
     job_posts = list(job_post_collection.find())
+    return JobPostCollection(job_posts=job_posts)
+
+
+@app.get(
+    "/job_posts/search",
+    response_description="Search job posts by criteria",
+    response_model=JobPostCollection,
+    response_model_by_alias=False,
+)
+async def search_job_posts(criteria: SearchCriteria = Depends()):
+    query = {}
+
+    # 근무 위치 (compAddr)
+    if criteria.compAddr:
+        query["compAddr"] = {
+            "$regex": criteria.compAddr} if criteria.compAddr != "-" else "-"
+
+    # 모집 직종 (jobNm)
+    if criteria.jobNm:
+        query["jobNm"] = criteria.jobNm
+
+    # 고용 형태 (empType)
+    if criteria.empType:
+        query["empType"] = criteria.empType
+
+    # 시력 (envEyesight)
+    if criteria.envEyesight:
+        query["envEyesight"] = criteria.envEyesight
+
+    # 드는 힘 (envLiftPower)
+    if criteria.envLiftPower:
+        query["envLiftPower"] = criteria.envLiftPower
+
+    # 양손 (envBothHands)
+    if criteria.envBothHands:
+        query["envBothHands"] = criteria.envBothHands
+
+    # MongoDB에서 해당 조건에 맞는 문서 검색
+    job_posts = list(job_post_collection.find(query))
     return JobPostCollection(job_posts=job_posts)
 
 # uvicorn job_post:app --reload
