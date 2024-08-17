@@ -133,7 +133,7 @@ async def list_job_posts():
 )
 async def search_job_posts(
     criteria: SearchCriteria = Depends(),
-    page: int = Query(1, ge=1),  # 페이지 번호, 기본값은 1
+    start: int = Query(0, ge=0),  # 페이지 번호, 기본값은 1
     limit: int = Query(10, ge=1, le=100)  # 페이지당 아이템 수, 기본값은 10, 최대 100
 ):
     query = {}
@@ -156,8 +156,7 @@ async def search_job_posts(
     total_count = await job_post_collection.count_documents(query)
 
     # 페이지네이션 적용
-    skip = (page - 1) * limit
-    job_posts_cursor = job_post_collection.find(query).skip(skip).limit(limit)
+    job_posts_cursor = job_post_collection.find(query).skip(start).limit(limit)
     job_posts = await job_posts_cursor.to_list(length=limit)
 
     # 응답 구성
@@ -166,4 +165,4 @@ async def search_job_posts(
         total_count=total_count,
     )
 
-# uvicorn main:app --reload
+# uvicorn job_post:app --reload
