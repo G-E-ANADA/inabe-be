@@ -1,5 +1,7 @@
 import os
+from datetime import datetime
 from typing import List, Optional
+
 import certifi
 import motor.motor_asyncio
 from bson import ObjectId
@@ -84,14 +86,23 @@ class JobPostModel(BaseModel):
     envLiftPower: str
     envLstnTalk: str
     envStndWalk: str
-    # envHandwork: str
+    # envHandwork: Optional[str]
     reqLicens: Optional[str]
     latitude: str
     longitude: str
+    startDate: Optional[datetime]  # 시작 날짜
+    endDate: Optional[datetime]  # 종료 날짜
+    searchRegion: str
+    searchJobCategory: str
+    searchEnvBothHands: str
+    searchEnvEyesight: str
+    searchEnvLiftPower: str
+    searchEnvLstnTalk: str
 
 
 class JobPostCollection(BaseModel):
     job_posts: List[JobPostModel]
+    total_count: int
 
 
 class SearchCriteria(BaseModel):
@@ -103,10 +114,17 @@ class SearchCriteria(BaseModel):
     envBothHands: Optional[str] = None
 
 
-class SearchResponse(BaseModel):
-    job_posts: List[JobPostModel]
-    total_count: int
+def str_to_objectid(id: str) -> ObjectId:
+    try:
+        return ObjectId(id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid ID format")
 
+def str_to_datetime(date_str) -> datetime:
+    if isinstance(date_str, datetime):
+        return date_str 
+    # return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+    return datetime.strptime(date_str, "%Y%m%d")
 
 @app.on_event("startup")
 async def on_startup():
@@ -122,45 +140,57 @@ async def on_startup():
 async def list_job_posts():
     job_posts_cursor = job_post_collection.find()
     job_posts = await job_posts_cursor.to_list(length=None)
-    return JobPostCollection(job_posts=job_posts)
+    
+    total_count = await job_post_collection.count_documents({})
+    
+    return JobPostCollection(
+        job_posts=job_posts, 
+        total_count=total_count
+    )
 
 
 @app.get(
     "/job_posts/search",
     response_description="Search job posts by criteria with pagination",
-    response_model=SearchResponse,
+    response_model=JobPostCollection,
     response_model_by_alias=False,
 )
 async def search_job_posts(
     criteria: SearchCriteria = Depends(),
     start: int = Query(0, ge=0),  # 페이지 번호, 기본값은 1
-    limit: int = Query(10, ge=1, le=100)  # 페이지당 아이템 수, 기본값은 10, 최대 100
+    limit: int = Query(10, ge=1, le=100),  # 페이지당 아이템 수, 기본값은 10, 최대 100
+    sort: str = Query('endDate', enum=['regDt', 'endDate'])  # 정렬 기준, 기본값은 'regDt'
 ):
     query = {}
 
-    if criteria.compAddr:  # 근무 위치 (compAddr)
+    if criteria.compAddr: 
         query["compAddr"] = {
             "$regex": criteria.compAddr} if criteria.compAddr != "-" else "-"
-    if criteria.jobNm:  # 모집 직종 (jobNm)
+    if criteria.jobNm:  
         query["jobNm"] = criteria.jobNm
-    if criteria.empType:  # 고용 형태 (empType)
+    if criteria.empType: 
         query["empType"] = criteria.empType
-    if criteria.envEyesight:  # 시력 (envEyesight)
+    if criteria.envEyesight: 
         query["envEyesight"] = criteria.envEyesight
-    if criteria.envLiftPower:  # 드는 힘 (envLiftPower)
+    if criteria.envLiftPower: 
         query["envLiftPower"] = criteria.envLiftPower
-    if criteria.envBothHands:  # 양손 (envBothHands)
+    if criteria.envBothHands: 
         query["envBothHands"] = criteria.envBothHands
 
-    # 총 아이템 수 계산
     total_count = await job_post_collection.count_documents(query)
-
+    
     # 페이지네이션 적용
     job_posts_cursor = job_post_collection.find(query).skip(start).limit(limit)
     job_posts = await job_posts_cursor.to_list(length=limit)
 
+    # 정렬
+    if sort == 'endDate':
+        job_posts.sort(key=lambda post: str_to_datetime(post["endDate"]), reverse=False)
+    else:
+        job_posts.sort(key=lambda post: str_to_datetime(post["regDt"]), reverse=True)
+
     # 응답 구성
-    return SearchResponse(
+    return JobPostCollection(
         job_posts=job_posts,
         total_count=total_count,
     )
