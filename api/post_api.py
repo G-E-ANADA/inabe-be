@@ -58,6 +58,8 @@ app.add_middleware(
 
 db = client.get_database("InAbleDB")
 job_post_collection = db.get_collection("job_posts")
+eud_post_collection = db.get_collection("edu_posts")
+
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
@@ -98,12 +100,23 @@ class JobPostModel(BaseModel):
     searchEnvEyesight: str
     searchEnvLiftPower: str
     searchEnvLstnTalk: str
-
+    compLogoUrl: str
 
 class JobPostCollection(BaseModel):
     job_posts: List[JobPostModel]
     total_count: int
 
+class EduPostModel(BaseModel):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    category: str
+    title: str
+    organization: str
+    date: str
+    content: str
+
+class EduPostCollection(BaseModel):
+    edu_posts: List[EduPostModel]
+    total_count: int
 
 class SearchCriteria(BaseModel):
     compAddr: Optional[str] = None
@@ -112,6 +125,7 @@ class SearchCriteria(BaseModel):
     envEyesight: Optional[str] = None
     envLiftPower: Optional[str] = None
     envBothHands: Optional[str] = None
+
 
 
 def str_to_objectid(id: str) -> ObjectId:
@@ -187,7 +201,7 @@ async def search_job_posts(
     if sort == 'endDate':
         job_posts.sort(key=lambda post: str_to_datetime(post["endDate"]), reverse=False)
     else:
-        job_posts.sort(key=lambda post: str_to_datetime(post["regDt"]), reverse=True)
+        job_posts.sort(key=lambda post: post["regDt"], reverse=True)
 
     # 응답 구성
     return JobPostCollection(
@@ -195,4 +209,53 @@ async def search_job_posts(
         total_count=total_count,
     )
 
-# uvicorn job_post:app --reload
+
+@app.get(
+    "/edu_posts/",
+    response_description="List all edu posts",
+    response_model=EduPostCollection,
+    response_model_by_alias=False,
+)
+async def list_edu_posts():
+    edu_posts_cursor = eud_post_collection.find()
+    edu_posts = await edu_posts_cursor.to_list(length=None)
+    
+    total_count = await eud_post_collection.count_documents({})
+    
+    return EduPostCollection(
+        edu_posts=edu_posts, 
+        total_count=total_count
+    )
+
+
+@app.get(
+    "/edu_posts/search",
+    response_description="Search edu posts by criteria with pagination",
+    response_model=EduPostCollection,
+    response_model_by_alias=False,
+)
+async def search_edu_posts(
+    criteria: SearchCriteria = Depends(),
+    start: int = Query(0, ge=0),  # 페이지 번호, 기본값은 1
+    limit: int = Query(10, ge=1, le=100),  # 페이지당 아이템 수, 기본값은 10, 최대 100
+    sort: str = Query('date', enum=['date'])  # 정렬 기준, 기본값은 'date'
+):
+    query = {}
+
+    total_count = await EduPostCollection.count_documents(query)
+    
+    # 페이지네이션 적용
+    edu_posts_cursor = eud_post_collection.find(query).skip(start).limit(limit)
+    edu_posts = await edu_posts_cursor.to_list(length=limit)
+
+    # 등록일순
+    if sort == 'date':
+        edu_posts.sort(key=lambda post: post["date"], reverse=False)
+        
+    # 응답 구성
+    return EduPostCollection(
+        edu_posts=edu_posts,
+        total_count=total_count,
+    )
+        
+# uvicorn post_api:app --reload
