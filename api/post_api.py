@@ -242,20 +242,6 @@ async def search_edu_posts(
 ):
     query = {}
 
-    if criteria.compAddr: 
-        query["compAddr"] = {
-            "$regex": criteria.compAddr} if criteria.compAddr != "-" else "-"
-    if criteria.eduNm:  
-        query["eduNm"] = criteria.eduNm
-    if criteria.empType: 
-        query["empType"] = criteria.empType
-    if criteria.envEyesight: 
-        query["envEyesight"] = criteria.envEyesight
-    if criteria.envLiftPower: 
-        query["envLiftPower"] = criteria.envLiftPower
-    if criteria.envBothHands: 
-        query["envBothHands"] = criteria.envBothHands
-
     total_count = await EduPostCollection.count_documents(query)
     
     # 페이지네이션 적용
