@@ -98,6 +98,7 @@ class JobPostModel(BaseModel):
     searchEnvEyesight: str
     searchEnvLiftPower: str
     searchEnvLstnTalk: str
+    compLogoUrl: str
 
 
 class JobPostCollection(BaseModel):
@@ -187,7 +188,7 @@ async def search_job_posts(
     if sort == 'endDate':
         job_posts.sort(key=lambda post: str_to_datetime(post["endDate"]), reverse=False)
     else:
-        job_posts.sort(key=lambda post: str_to_datetime(post["regDt"]), reverse=True)
+        job_posts.sort(key=lambda post: post["regDt"], reverse=True)
 
     # 응답 구성
     return JobPostCollection(
