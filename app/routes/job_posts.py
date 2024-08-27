@@ -28,18 +28,22 @@ async def search_job_posts(
 ):
     query = {}
     
-    if criteria.compAddr:
-        query["compAddr"] = {"$regex": criteria.compAddr}
-    if criteria.jobNm:
-        query["jobNm"] = criteria.jobNm
     if criteria.empType:
         query["empType"] = criteria.empType
-    if criteria.envEyesight:
-        query["envEyesight"] = criteria.envEyesight
-    if criteria.envLiftPower:
-        query["envLiftPower"] = criteria.envLiftPower
-    if criteria.envBothHands:
-        query["envBothHands"] = criteria.envBothHands
+    if criteria.enterType:
+        query["enterType"] = criteria.enterType
+    if criteria.searchRegion:
+        query["searchRegion"] = criteria.searchRegion
+    if criteria.searchJobCategory:
+        query["searchJobCategory"] = criteria.searchJobCategory
+    if criteria.searchEnvEyesight:
+        query["searchEnvEyesight"] = criteria.searchEnvEyesight
+    if criteria.searchEnvLstnTalk:
+        query["searchEnvLstnTalk"] = criteria.searchEnvLstnTalk
+    if criteria.searchEnvLiftPower:
+        query["searchEnvLiftPower"] = criteria.searchEnvLiftPower
+    if criteria.searchEnvBothHands:
+        query["searchEnvBothHands"] = criteria.searchEnvBothHands
 
     total_count = await job_post_collection.count_documents(query)
     

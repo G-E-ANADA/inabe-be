@@ -11,9 +11,11 @@ class EduPostCollection(BaseModel):
     total_count: int
 
 class SearchCriteria(BaseModel):
-    compAddr: Optional[str] = None
-    jobNm: Optional[str] = None
     empType: Optional[str] = None
-    envEyesight: Optional[str] = None
-    envLiftPower: Optional[str] = None
-    envBothHands: Optional[str] = None
+    enterType: Optional[str] = None
+    searchRegion: Optional[str] = None
+    searchJobCategory: Optional[str] = None
+    searchEnvEyesight: Optional[str] = None
+    searchEnvLstnTalk: Optional[str] = None
+    searchEnvLiftPower: Optional[str] = None
+    searchEnvBothHands: Optional[str] = None
