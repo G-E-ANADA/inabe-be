@@ -42,6 +42,7 @@ class JobPostModel(BaseModel):
     searchEnvLiftPower: str
     searchEnvLstnTalk: str
     compLogoUrl: str
+    postId: int
 
 class EduPostModel(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
@@ -50,3 +51,4 @@ class EduPostModel(BaseModel):
     organization: str
     date: str
     content: str
+    postId: int
