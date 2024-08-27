@@ -47,13 +47,15 @@ async def search_job_posts(
 
     total_count = await job_post_collection.count_documents(query)
     
-    job_posts_cursor = job_post_collection.find(query).skip(start).limit(limit)
+    job_posts_cursor = job_post_collection.find(query).sort(
+        "endDate" if sort == "endDate" else "regDt", 
+        1 if sort == "endDate" else -1
+    ).skip(start).limit(limit)
+    
     job_posts = await job_posts_cursor.to_list(length=limit)
 
-    if sort == 'endDate':
-        job_posts.sort(key=lambda post: str_to_datetime(post.get("endDate", "")), reverse=False)
-    else:
-        job_posts.sort(key=lambda post: post.get("regDt", ""), reverse=True)
+    print(f"Sorting by: {'endDate' if sort == 'endDate' else 'regDt'}")
+    print(f"Order: {1 if sort == 'endDate' else -1}")
 
     return JobPostCollection(
         job_posts=job_posts,
